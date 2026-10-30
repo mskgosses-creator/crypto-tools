@@ -268,3 +268,127 @@ def write_report(
 
     with open(path, "w", encoding="utf-8") as f:
         f.write(doc)
+
+
+def write_wf_report(
+    path: str,
+    *,
+    symbol: str,
+    tf: str,
+    market: str,
+    strategy: str,
+    folds: list,
+    full: Metrics,
+    base: Metrics,
+    equity: pd.Series,
+    base_equity: pd.Series,
+    trades: list,
+    train_months: int,
+    test_months: int,
+    step_months: int,
+    risk: float,
+    fee: float,
+    slip: float,
+) -> None:
+    """Отчёт walk-forward: окна, выбранные параметры, склейка out-of-sample."""
+    gen = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+    pf = "∞" if full.profit_factor == float("inf") else f"{full.profit_factor:.2f}"
+    base_pf = "∞" if base.profit_factor == float("inf") else f"{base.profit_factor:.2f}"
+    wins = sum(1 for f in folds if f.test_metrics and f.test_metrics.expectancy_r > 0)
+
+    rows = []
+    for i, f in enumerate(folds, start=1):
+        p = " ".join(f"{k}={v}" for k, v in f.params.items())
+        tm, trm = f.test_metrics, f.train_metrics
+        train_r = f"{trm.expectancy_r:+.2f}R" if trm else "—"
+        test_r = f"{tm.expectancy_r:+.2f}R" if tm else "—"
+        cls = "win" if tm and tm.expectancy_r > 0 else "loss"
+        rows.append(
+            "<tr>"
+            f"<td class='num'>{i}</td>"
+            f"<td>{f.train_start:%Y-%m} → {f.train_end:%Y-%m}</td>"
+            f"<td>{f.test_start:%Y-%m} → {f.test_end:%Y-%m}</td>"
+            f"<td style='color:#8a95a3;font-size:11.5px'>{html.escape(p)}</td>"
+            f"<td class='num'>{train_r}</td>"
+            f"<td class='num {cls}'>{test_r}</td>"
+            f"<td class='num'>{tm.trades if tm else 0}</td>"
+            f"<td class='num'>{(tm.total_return if tm else 0):+.1f}%</td>"
+            "</tr>"
+        )
+
+    fold_table = (
+        "<table><thead><tr><th class='num'>#</th><th>Обучение</th><th>Проверка</th>"
+        "<th>Выбранные параметры</th><th class='num'>Train R</th>"
+        "<th class='num'>Test R</th><th class='num'>Сделок</th>"
+        "<th class='num'>Доход</th></tr></thead><tbody>"
+        + "".join(rows)
+        + "</tbody></table>"
+    )
+
+    doc = f"""<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{html.escape(symbol)} {html.escape(strategy)} — walk-forward</title>
+<style>{CSS}</style></head>
+<body><div class="wrap">
+  <h1>{html.escape(symbol)} · {html.escape(strategy)} · walk-forward</h1>
+  <div class="sub">{html.escape(market)}, {html.escape(tf)}
+   · train {train_months} мес → test {test_months} мес, шаг {step_months} мес
+   · риск {risk}%, комиссия {fee} bp, слippage {slip} bp
+   · {len(folds)} окон · отчёт от {gen}</div>
+
+  <div class="warn">
+    Каждое окно оптимизировалось вслепую на прошлом и проверялось на следующем
+    отрезке. Кривая ниже — склейка именно проверочных отрезков, где параметры
+    не подбирались.
+  </div>
+
+  <div class="grid" style="margin-bottom:16px">
+    {_kpi("Итог OOS", f"{full.total_return:+.1f}%", f"{_fmt_money(full.initial)} → {_fmt_money(full.final)}", "win" if full.total_return >= 0 else "loss")}
+    {_kpi("Макс. просадка", f"{full.max_dd_pct:.1f}%", f"{_fmt_money(full.max_dd)}")}
+    {_kpi("Сделок", str(full.trades), f"winrate {full.winrate:.0f}%")}
+    {_kpi("Ожидание", f"{full.expectancy_r:+.2f}R", "на сделку", "win" if full.expectancy_r > 0 else "loss")}
+    {_kpi("Profit factor", pf, f"у базовой линии {base_pf}")}
+    {_kpi("Прибыльных окон", f"{wins} / {len(folds)}", "test R > 0")}
+  </div>
+
+  <div class="card">
+    <h2>Склейка out-of-sample</h2>
+    {_svg_curve(equity, base_equity)}
+    <p style="color:#8a95a3;font-size:12px;margin:10px 0 0">
+      Сплошная линия — walk-forward с подбором параметров.
+      Пунктир — те же окна, но с параметрами по умолчанию.
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>Окна</h2>
+    {fold_table}
+  </div>
+
+  <div class="card">
+    <h2>Сравнение с базовой линией</h2>
+    <div class="grid">
+      {_kpi("Walk-forward, R", f"{full.expectancy_r:+.2f}R", "с подбором параметров", "win" if full.expectancy_r > 0 else "loss")}
+      {_kpi("По умолчанию, R", f"{base.expectancy_r:+.2f}R", "те же окна, без подбора", "win" if base.expectancy_r > 0 else "loss")}
+      {_kpi("Walk-forward, итог", f"{full.total_return:+.1f}%", "", "win" if full.total_return >= 0 else "loss")}
+      {_kpi("По умолчанию, итог", f"{base.total_return:+.1f}%", "", "win" if base.total_return >= 0 else "loss")}
+    </div>
+    <p style="color:#8a95a3;font-size:12.5px;margin:14px 0 0">
+      Если подбор параметров не бьёт параметры по умолчанию — оптимизация
+      отнимает время и добавляет риск переобучения, ничего не давая взамен.
+    </p>
+  </div>
+
+  <div class="foot">
+    Окна не пересекаются: конец проверочного отрезка одного окна — начало
+    следующего. Капитал переносится из окна в окно, поэтому итог — это одна
+    непрерывная история, а не сумма независимых тестов.
+    <br>Не инвестиционная рекомендация.
+  </div>
+</div></body></html>"""
+
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(doc)
+

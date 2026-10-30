@@ -69,37 +69,38 @@ def donchian(df: pd.DataFrame, entry_n: int = 55, exit_n: int = 20,
 
     close = df["close"]
     # уровни берём со сдвигом: сегодняшний бар не должен «подсказывать» пробой
-    upper = hh.shift(1)
-    lower = ll.shift(1)
-    exit_up = exit_hh.shift(1)
-    exit_dn = exit_ll.shift(1)
+    upper = hh.shift(1).to_numpy(dtype=float)
+    lower = ll.shift(1).to_numpy(dtype=float)
+    exit_up = exit_hh.shift(1).to_numpy(dtype=float)
+    exit_dn = exit_ll.shift(1).to_numpy(dtype=float)
+    px = close.to_numpy(dtype=float)
 
-    signal = pd.Series(np.nan, index=df.index, dtype=float)
+    n = len(df)
+    out = np.zeros(n, dtype=int)
     state = 0
-    for i in range(len(df)):
-        if np.isnan(upper.iloc[i]) or np.isnan(lower.iloc[i]):
-            signal.iloc[i] = 0
+    for i in range(n):
+        if np.isnan(upper[i]) or np.isnan(lower[i]):
             continue
-        price = close.iloc[i]
+        price = px[i]
         if state == 0:
-            if price > upper.iloc[i]:
+            if price > upper[i]:
                 state = 1
-            elif allow_short and price < lower.iloc[i]:
+            elif allow_short and price < lower[i]:
                 state = -1
         elif state == 1:
-            if price < exit_dn.iloc[i]:
+            if price < exit_dn[i]:
                 state = 0
-                if allow_short and price < lower.iloc[i]:
+                if allow_short and price < lower[i]:
                     state = -1
         elif state == -1:
-            if price > exit_up.iloc[i]:
+            if price > exit_up[i]:
                 state = 0
-                if price > upper.iloc[i]:
+                if price > upper[i]:
                     state = 1
-        signal.iloc[i] = state
+        out[i] = state
 
     stop = atr(df, atr_period) * stop_atr
-    return Signals(signal=signal.astype(int), stop_dist=stop.fillna(0.0))
+    return Signals(signal=pd.Series(out, index=df.index), stop_dist=stop.fillna(0.0))
 
 
 def rsi(df: pd.DataFrame, period: int = 14) -> pd.Series:
@@ -121,23 +122,24 @@ def rsi_meanrev(df: pd.DataFrame, period: int = 14, low: float = 30.0,
     Лонг при RSI < low, выход при RSI > high. Против тренда — поэтому стоп
     обязателен и обычно теснее, чем в трендовых системах.
     """
-    r = rsi(df, period)
-    signal = pd.Series(0, index=df.index, dtype=int)
+    r = rsi(df, period).to_numpy(dtype=float)
+    n = len(df)
+    out = np.zeros(n, dtype=int)
     state = 0
-    for i in range(len(df)):
+    for i in range(n):
         if state == 0:
-            if r.iloc[i] < low:
+            if r[i] < low:
                 state = 1
-            elif allow_short and r.iloc[i] > (100 - low):
+            elif allow_short and r[i] > (100 - low):
                 state = -1
-        elif state == 1 and r.iloc[i] > high:
+        elif state == 1 and r[i] > high:
             state = 0
-        elif state == -1 and r.iloc[i] < (100 - high):
+        elif state == -1 and r[i] < (100 - high):
             state = 0
-        signal.iloc[i] = state
+        out[i] = state
 
     stop = atr(df, atr_period) * stop_atr
-    return Signals(signal=signal, stop_dist=stop.fillna(0.0))
+    return Signals(signal=pd.Series(out, index=df.index), stop_dist=stop.fillna(0.0))
 
 
 REGISTRY = {
