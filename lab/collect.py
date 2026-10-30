@@ -113,6 +113,35 @@ def fetch_klines(symbol: str, market: str, tf: str, start_ms: int, end_ms: int):
         time.sleep(0.25)
 
 
+def fetch_last(symbol: str, market: str, tf: str, limit: int = 400):
+    """Последние свечи одним запросом (для пейпер-трейдинга)."""
+    base = SPOT if market == "spot" else FUTURES
+    path = "/api/v3/klines" if market == "spot" else "/fapi/v1/klines"
+    url = f"{base}{path}?symbol={symbol}&interval={tf}&limit={min(limit, 1000)}"
+    batch = _get(url)
+    now_ms = int(time.time() * 1000)
+    rows = []
+    for k in batch:
+        if int(k[6]) > now_ms:  # незакрытая свеча
+            continue
+        rows.append(
+            (
+                symbol, market, tf, int(k[0]),
+                float(k[1]), float(k[2]), float(k[3]), float(k[4]), float(k[5]),
+            )
+        )
+    return rows
+
+
+def fetch_recent_funding(symbol: str, limit: int = 90):
+    """Последние ставки финансирования."""
+    url = f"{FUTURES}/fapi/v1/fundingRate?symbol={symbol}&limit={limit}"
+    return [
+        (symbol, int(f["fundingTime"]), float(f["fundingRate"]))
+        for f in _get(url)
+    ]
+
+
 def fetch_funding(symbol: str, start_ms: int, end_ms: int):
     """История ставок финансирования (только фьючерсы, раз в 8 часов)."""
     cursor = start_ms
