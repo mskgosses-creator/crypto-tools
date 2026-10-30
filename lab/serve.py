@@ -251,6 +251,12 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path.startswith("/api/state"):
+            # из браузера уводим на страницу: люди открывают API вместо дашборда
+            if "text/html" in self.headers.get("Accept", ""):
+                self.send_response(302)
+                self.send_header("Location", "/")
+                self.end_headers()
+                return
             self._send(200, json.dumps(snapshot(), ensure_ascii=False))
         elif self.path in ("/", "/index.html"):
             self._send(200, PAGE, "text/html; charset=utf-8")
@@ -308,5 +314,6 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
 
 
