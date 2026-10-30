@@ -1,0 +1,1182 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Риск и журнал — калькулятор позиции и статистика сделок</title>
+<style>
+:root{
+  --bg:#0e1115; --panel:#151a21; --panel2:#1b222b; --line:#242d38;
+  --text:#dbe2ea; --muted:#8a95a3; --gold:#c9a227; --gold-dim:#8a7020;
+  --green:#4ea87a; --red:#cf5f5f; --blue:#5b8db8;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--text);
+  font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+h2{font-size:14px;margin:0 0 14px;font-weight:600;letter-spacing:.02em;color:var(--text)}
+h2 .sub{font-weight:400;color:var(--muted);font-size:12px;margin-left:8px}
+.muted{color:var(--muted)}
+.win{color:var(--green)}
+.loss{color:var(--red)}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.nowrap{white-space:nowrap}
+
+/* header */
+.top{position:sticky;top:0;z-index:20;background:rgba(14,17,21,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.top-inner{display:flex;align-items:center;gap:18px;height:64px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#2b2416,#3d3218);border:1px solid #4c3f1d;color:var(--gold);display:grid;place-items:center;font-size:17px;font-weight:700;flex:none}
+.brand-title{font-weight:650;font-size:14.5px;letter-spacing:.15px;white-space:nowrap}
+.brand-sub{font-size:11px;color:var(--muted);white-space:nowrap}
+.tabs{display:flex;gap:3px;margin-left:auto;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:3px}
+.tab{background:transparent;border:0;color:var(--muted);padding:7px 14px;border-radius:7px;cursor:pointer;font-size:13px;font-weight:550;font-family:inherit}
+.tab:hover{color:var(--text)}
+.tab.on{background:var(--panel2);color:var(--text)}
+.actions{display:flex;gap:6px}
+
+/* buttons */
+.btn{border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:8px 12px;border-radius:8px;cursor:pointer;font-size:12.5px;font-family:inherit;white-space:nowrap}
+.btn:hover{border-color:#3a4552;background:#202934}
+.btn.primary{background:var(--gold);border-color:var(--gold);color:#171307;font-weight:650}
+.btn.primary:hover{background:#d8b02c;border-color:#d8b02c}
+.btn.ghost{background:transparent}
+.btn.ghost:hover{background:var(--panel2)}
+.icon{background:transparent;border:1px solid transparent;color:var(--muted);cursor:pointer;padding:2px 6px;border-radius:6px;font-size:13px}
+.icon:hover{background:var(--panel2);color:var(--text);border-color:var(--line)}
+.icon.danger:hover{color:var(--red)}
+
+/* layout */
+main{padding:22px 0 60px}
+.tabpane{display:none}
+.tabpane.on{display:block}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:16px 18px;margin-bottom:16px}
+.card-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:14px}
+.card-head h2{margin:0}
+
+/* forms */
+.field-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:14px}
+.field-row.cols2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.field-row.cols3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;min-width:0}
+.field:last-child{margin-bottom:0}
+.field-row .field{margin-bottom:0}
+.field label{font-size:11.5px;color:var(--muted);letter-spacing:.02em;text-transform:uppercase}
+.field .hint{text-transform:none;letter-spacing:0;color:#66707d;font-size:10.5px}
+input,select{
+  background:#0f1419;border:1px solid var(--line);color:var(--text);
+  padding:9px 10px;border-radius:8px;font-size:14px;font-family:inherit;
+  font-variant-numeric:tabular-nums;min-width:0;width:100%;
+}
+input:focus,select:focus{outline:none;border-color:var(--gold-dim);box-shadow:0 0 0 3px rgba(201,162,39,.09)}
+input::placeholder{color:#4e5763}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;width:max-content}
+.seg button{background:transparent;border:0;color:var(--muted);padding:8px 16px;cursor:pointer;font-size:13px;font-family:inherit}
+.seg button.on{background:var(--gold);color:#171307;font-weight:650}
+.note{font-size:12px;color:var(--muted);margin:14px 0 0;line-height:1.5}
+.form-actions{display:flex;gap:8px;margin-top:4px}
+
+/* results */
+.rows{display:flex;flex-direction:column}
+.row{display:flex;align-items:baseline;justify-content:space-between;gap:14px;padding:9px 0;border-bottom:1px dashed #1f2833;font-size:13.5px}
+.row:last-child{border-bottom:0}
+.row span{color:var(--muted)}
+.row b{font-variant-numeric:tabular-nums;font-weight:600;font-size:14.5px}
+.row b.big{font-size:19px}
+#calc-warn{margin-top:14px;display:flex;flex-direction:column;gap:8px}
+.warn{border-left:3px solid var(--red);background:rgba(207,95,95,.07);padding:9px 12px;border-radius:0 7px 7px 0;font-size:12.5px;line-height:1.45;color:#e6b9b9}
+.ok{border-left:3px solid var(--green);background:rgba(78,168,122,.06);padding:9px 12px;border-radius:0 7px 7px 0;font-size:12.5px;color:#a9d6c0}
+
+/* table */
+.table-scroll{overflow-x:auto;margin:0 -6px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;padding:8px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 8px;border-bottom:1px solid #1c242e;vertical-align:middle}
+tbody tr:hover{background:#171e26}
+.empty{padding:26px 8px;color:var(--muted);font-size:13px;text-align:center}
+
+/* stats */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:13px 15px}
+.kpi .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:7px}
+.kpi .v{font-size:21px;font-weight:650;font-variant-numeric:tabular-nums;line-height:1.15}
+.kpi .d{font-size:11.5px;color:var(--muted);margin-top:5px}
+.empty-card{color:var(--muted);font-size:13px;text-align:center;padding:26px}
+#equity-canvas{width:100%;height:280px;display:block}
+.breakdown{width:100%}
+.breakdown td{padding:7px 8px}
+
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(5,7,10,.72);display:grid;place-items:center;z-index:50;padding:20px}
+.modal[hidden]{display:none}
+.modal-card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:20px 22px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.modal-card h3{margin:0 0 16px;font-size:15px;font-weight:600}
+.modal-actions{display:flex;gap:8px;margin-top:6px}
+.modal-actions .spacer{flex:1}
+
+/* toast */
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(10px);background:#232c37;border:1px solid #33404e;color:var(--text);padding:10px 16px;border-radius:9px;font-size:13px;opacity:0;pointer-events:none;transition:all .18s ease;z-index:60;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+details summary{cursor:pointer;color:var(--muted);font-size:13px}
+details[open] summary{color:var(--text);margin-bottom:10px}
+details p,details li{font-size:13px;color:#b7c1cd;line-height:1.6}
+details ul{margin:8px 0;padding-left:20px}
+.footer{color:#5d6673;font-size:11.5px;text-align:center;margin-top:30px;line-height:1.7}
+
+@media (max-width:960px){
+  .grid2{grid-template-columns:1fr}
+  .kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .brand-sub{display:none}
+  .actions{display:none}
+}
+@media (max-width:560px){
+  .kpi-grid{grid-template-columns:1fr}
+  .field-row.cols2,.field-row.cols3{grid-template-columns:1fr}
+}
+@media (max-width:680px){
+  .top-inner{height:auto;flex-wrap:wrap;padding:10px 0;gap:10px}
+  .tabs{order:3;width:100%;justify-content:space-between;margin-left:0}
+  .tab{flex:1;padding:8px 6px;font-size:12px}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap top-inner">
+    <div class="brand">
+      <span class="logo">◆</span>
+      <div>
+        <div class="brand-title">Риск и журнал</div>
+        <div class="brand-sub">калькулятор позиции · статистика сделок</div>
+      </div>
+    </div>
+    <nav class="tabs">
+      <button class="tab on" data-tab="calc" type="button">Калькулятор</button>
+      <button class="tab" data-tab="journal" type="button">Журнал</button>
+      <button class="tab" data-tab="stats" type="button">Статистика</button>
+    </nav>
+    <div class="actions">
+      <button class="btn ghost" id="btn-demo" type="button">Пример</button>
+      <button class="btn ghost" id="btn-export" type="button">Экспорт</button>
+      <button class="btn ghost" id="btn-import" type="button">Импорт</button>
+      <button class="btn ghost" id="btn-csv" type="button">CSV</button>
+      <input type="file" id="import-file" accept="application/json,.json" hidden>
+    </div>
+  </div>
+</header>
+
+<main>
+<div class="wrap">
+
+  <!-- ================= КАЛЬКУЛЯТОР ================= -->
+  <section class="tabpane on" id="tab-calc">
+    <div class="grid2">
+      <div class="card">
+        <h2>Параметры сделки</h2>
+
+        <div class="field-row cols2">
+          <div class="field"><label>Депозит, $</label><input id="c-equity" type="number" min="0" step="1" inputmode="decimal"></div>
+          <div class="field"><label>Риск на сделку, %</label><input id="c-risk" type="number" min="0.01" step="0.1" inputmode="decimal"></div>
+          <div class="field"><label>Плечо, ×</label><input id="c-lev" type="number" min="1" step="1" inputmode="decimal"></div>
+          <div class="field"><label>Комиссия, % за сторону</label><input id="c-fee" type="number" min="0" step="0.01" inputmode="decimal"></div>
+        </div>
+
+        <div class="field">
+          <label>Направление</label>
+          <div class="seg" id="c-side">
+            <button type="button" data-side="long" class="on">Лонг — рост</button>
+            <button type="button" data-side="short">Шорт — падение</button>
+          </div>
+        </div>
+
+        <div class="field-row cols3">
+          <div class="field"><label>Цена входа, $</label><input id="c-entry" type="number" min="0" step="any" inputmode="decimal" placeholder="65000"></div>
+          <div class="field"><label>Стоп-лосс, $</label><input id="c-stop" type="number" min="0" step="any" inputmode="decimal" placeholder="63700"></div>
+          <div class="field"><label>Тейк-профит, $ <span class="hint">необяз.</span></label><input id="c-tp" type="number" min="0" step="any" inputmode="decimal" placeholder="67600"></div>
+        </div>
+
+        <p class="note">Размер позиции считается от стоп-лосса: убыток при срабатывании стопа не должен превышать выбранный процент риска. Комиссия указана за одну сторону (вход и выход считаются отдельно).</p>
+      </div>
+
+      <div class="card">
+        <h2>Результат</h2>
+        <div class="rows">
+          <div class="row"><span>Риск по стопу</span><b id="r-risk" class="big">—</b></div>
+          <div class="row"><span>Размер позиции</span><b id="r-size">—</b></div>
+          <div class="row"><span>Стоимость позиции</span><b id="r-notional">—</b></div>
+          <div class="row"><span>Маржа (залог)</span><b id="r-margin">—</b></div>
+          <div class="row"><span>Стоп, % от входа</span><b id="r-stop">—</b></div>
+          <div class="row"><span>Комиссии, туда-обратно</span><b id="r-fees">—</b></div>
+          <div class="row"><span>Риск с комиссиями</span><b id="r-realrisk">—</b></div>
+          <div class="row"><span>Прибыль при тейке</span><b id="r-tp" class="win">—</b></div>
+          <div class="row"><span>R:R при тейке</span><b id="r-r">—</b></div>
+          <div class="row"><span>Ликвидация (оценка)</span><b id="r-liq">—</b></div>
+        </div>
+        <div id="calc-warn"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ЖУРНАЛ ================= -->
+  <section class="tabpane" id="tab-journal">
+    <div class="card">
+      <h2>Новая сделка</h2>
+      <form id="trade-form" autocomplete="off">
+        <div class="field-row">
+          <div class="field"><label>Дата и время</label><input id="j-ts" type="datetime-local"></div>
+          <div class="field"><label>Инструмент</label><input id="j-symbol" list="symbols" placeholder="BTCUSDT" required></div>
+          <div class="field"><label>Направление</label>
+            <select id="j-side"><option value="long">Лонг</option><option value="short">Шорт</option></select>
+          </div>
+          <div class="field"><label>Сетап</label><input id="j-setup" list="setups" placeholder="пробой, откат…"></div>
+        </div>
+
+        <div class="field-row">
+          <div class="field"><label>Вход, $</label><input id="j-entry" type="number" step="any" inputmode="decimal" required></div>
+          <div class="field"><label>Стоп, $</label><input id="j-stop" type="number" step="any" inputmode="decimal"></div>
+          <div class="field"><label>Размер, монет</label><input id="j-size" type="number" step="any" inputmode="decimal" required></div>
+          <div class="field"><label>Выход, $ <span class="hint">пусто = открыта</span></label><input id="j-exit" type="number" step="any" inputmode="decimal"></div>
+          <div class="field"><label>Комиссия, $ <span class="hint">пусто = авто</span></label><input id="j-fee" type="number" step="any" inputmode="decimal"></div>
+        </div>
+
+        <div class="field"><label>Заметка</label><input id="j-note" placeholder="почему вошёл, что видел, что пошло не так"></div>
+
+        <div class="form-actions">
+          <button class="btn primary" type="submit">Добавить сделку</button>
+          <button class="btn ghost" type="button" id="btn-from-calc">Взять из калькулятора</button>
+        </div>
+      </form>
+      <datalist id="symbols"></datalist>
+      <datalist id="setups"></datalist>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Сделки</h2><span class="muted" id="journal-count"></span></div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Дата</th><th>Инструмент</th><th>Напр.</th><th class="num">Вход</th>
+              <th class="num">Стоп</th><th class="num">Выход</th><th class="num">Размер</th>
+              <th class="num">PnL</th><th class="num">R</th><th>Сетап</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="trades-body"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="journal-empty" hidden>Пока пусто. Добавьте первую сделку или нажмите «Пример» в шапке.</div>
+    </div>
+  </section>
+
+  <!-- ================= СТАТИСТИКА ================= -->
+  <section class="tabpane" id="tab-stats">
+    <div class="kpi-grid" id="stat-cards"></div>
+
+    <div class="card">
+      <div class="card-head"><h2>Кривая капитала</h2><span class="muted" id="curve-note"></span></div>
+      <canvas id="equity-canvas"></canvas>
+      <div id="stats-empty" class="empty" hidden>Нет закрытых сделок — считать нечего.</div>
+    </div>
+
+    <div class="grid2">
+      <div class="card"><h2>По сетапам</h2><div id="by-setup"></div></div>
+      <div class="card"><h2>По инструментам</h2><div id="by-symbol"></div></div>
+    </div>
+
+    <div class="card">
+      <details>
+        <summary>Как читать эти цифры</summary>
+        <p><b>R</b> — результат сделки в единицах риска. Если риск по стопу был $50, а заработали $100, это <b>+2R</b>. Считать в R, а не в долларах, важно: так видно качество решений независимо от размера депозита.</p>
+        <ul>
+          <li><b>Winrate</b> — доля прибыльных сделок. Сам по себе ничего не значит: можно выигрывать в 30% сделок и быть в плюсе, если прибыль больше убытков.</li>
+          <li><b>Ожидание, R</b> — средний результат сделки в R. Это и есть ваш «край». Плюс 0.2R значит: в среднем каждая сделка приносит 0.2 риска. Минус — стратегия убыточна, сколько бы удачных дней ни было.</li>
+          <li><b>Profit factor</b> — сумма прибылей, делённая на сумму убытков. Ниже 1.0 — вы теряете. Устойчиво выше 1.3 — уже хорошо, выше 2.0 на долгой истории — редкость.</li>
+          <li><b>Просадка</b> — падение капитала от максимума. Показывает, что придётся пережить психологически. Просадка 20% при ожидании +0.2R — нормальная плата за работу.</li>
+        </ul>
+        <p>Главное правило: <b>маленькая выборка врёт</b>. На 10 сделках winrate 70% не значит ничего. Смотрите на статистику после 50–100 сделок и обязательно записывайте сделки, которые не совершили, — они тоже часть картины.</p>
+      </details>
+    </div>
+
+    <div class="footer">
+      Данные хранятся только в этом браузере (localStorage) и привязаны к пути файла: не переименовывайте и не перемещайте его.<br>
+      Перед очисткой кэша или сменой браузера делайте «Экспорт». Инструмент для расчётов и дисциплины, не инвестиционная рекомендация.
+    </div>
+  </section>
+
+</div>
+</main>
+
+<!-- ================= МОДАЛЬНОЕ ОКНО РЕДАКТИРОВАНИЯ ================= -->
+<div class="modal" id="modal" hidden>
+  <div class="modal-card">
+    <h3>Редактировать сделку</h3>
+    <div class="field-row">
+      <div class="field"><label>Дата и время</label><input id="m-ts" type="datetime-local"></div>
+      <div class="field"><label>Инструмент</label><input id="m-symbol"></div>
+      <div class="field"><label>Направление</label>
+        <select id="m-side"><option value="long">Лонг</option><option value="short">Шорт</option></select>
+      </div>
+      <div class="field"><label>Сетап</label><input id="m-setup" list="setups"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Вход, $</label><input id="m-entry" type="number" step="any"></div>
+      <div class="field"><label>Стоп, $</label><input id="m-stop" type="number" step="any"></div>
+      <div class="field"><label>Размер, монет</label><input id="m-size" type="number" step="any"></div>
+      <div class="field"><label>Выход, $</label><input id="m-exit" type="number" step="any"></div>
+      <div class="field"><label>Комиссия, $</label><input id="m-fee" type="number" step="any"></div>
+    </div>
+    <div class="field"><label>Заметка</label><input id="m-note"></div>
+    <div class="modal-actions">
+      <button class="btn primary" id="m-save" type="button">Сохранить</button>
+      <button class="btn ghost" id="m-cancel" type="button">Отмена</button>
+      <span class="spacer"></span>
+      <button class="btn ghost" id="m-delete" type="button" style="color:var(--red)">Удалить</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+
+/* ============================ ХРАНИЛИЩЕ ============================ */
+var STORAGE_KEY = 'crypto_risk_journal_v1';
+var DEFAULTS = { equity: 1000, risk: 1, lev: 1, fee: 0.1 };
+
+var state = loadState();
+var calcSide = 'long';
+var lastCalc = null;
+var editingId = null;
+
+function loadState(){
+  try{
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      var s = JSON.parse(raw);
+      if(s && Array.isArray(s.trades)){
+        return { settings: mergeSettings(s.settings), trades: s.trades.map(normalizeTrade) };
+      }
+    }
+  }catch(e){ console.warn('load failed', e); }
+  return { settings: { equity: 1000, risk: 1, lev: 1, fee: 0.1 }, trades: [] };
+}
+function mergeSettings(s){
+  s = s || {};
+  return {
+    equity: isNum(s.equity) ? +s.equity : DEFAULTS.equity,
+    risk:   isNum(s.risk)   ? +s.risk   : DEFAULTS.risk,
+    lev:    isNum(s.lev)    ? +s.lev    : DEFAULTS.lev,
+    fee:    isNum(s.fee)    ? +s.fee    : DEFAULTS.fee
+  };
+}
+function normalizeTrade(t){
+  return {
+    id: t.id || uid(),
+    ts: t.ts || nowLocal(),
+    symbol: String(t.symbol || '').toUpperCase(),
+    side: t.side === 'short' ? 'short' : 'long',
+    entry: toNum(t.entry),
+    stop: t.stop == null || t.stop === '' ? null : toNum(t.stop),
+    exit: t.exit == null || t.exit === '' ? null : toNum(t.exit),
+    size: toNum(t.size),
+    fee: t.fee == null || t.fee === '' ? null : toNum(t.fee),
+    setup: t.setup || '',
+    note: t.note || '',
+    closedAt: t.closedAt || null
+  };
+}
+function saveState(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  catch(e){ toast('Не удалось сохранить данные: ' + e.message); }
+}
+
+/* ============================ ХЕЛПЕРЫ ============================ */
+function $(sel, root){ return (root || document).querySelector(sel); }
+function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function el(id){ return document.getElementById(id); }
+function isNum(v){ return v !== null && v !== '' && isFinite(+v); }
+function toNum(v){ var n = parseFloat(String(v).replace(',', '.')); return isFinite(n) ? n : 0; }
+function num(id){
+  var node = el(id);
+  if(!node) return 0;
+  var raw = String(node.value).replace(/\s/g, '').replace(',', '.');
+  var n = parseFloat(raw);
+  return isFinite(n) ? n : 0;
+}
+function uid(){
+  return 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+function nowLocal(){
+  var d = new Date();
+  function p(n){ return String(n).padStart(2, '0'); }
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+function fmt(v, d){
+  if(!isFinite(v)) return '—';
+  return new Intl.NumberFormat('ru-RU', {
+    minimumFractionDigits: d == null ? 2 : d,
+    maximumFractionDigits: d == null ? 2 : d
+  }).format(v);
+}
+function money(v, d){
+  if(!isFinite(v)) return '—';
+  var sign = v < 0 ? '-' : '';
+  return sign + '$' + fmt(Math.abs(v), d == null ? 2 : d);
+}
+function fmtPrice(v){
+  v = +v;
+  if(!isFinite(v)) return '—';
+  var d = v >= 1000 ? 0 : (v >= 1 ? 2 : 6);
+  return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: d }).format(v);
+}
+function fmtSize(v){
+  if(!isFinite(v)) return '—';
+  return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 6 }).format(v);
+}
+function fmtDate(ts){
+  var d = new Date(ts);
+  if(isNaN(d.getTime())) return String(ts);
+  return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' }) + ' ' +
+         d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+}
+function esc(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+var toastTimer = null;
+function toast(msg){
+  var t = el('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 2600);
+}
+
+/* ============================ ВКЛАДКИ ============================ */
+function setTab(name){
+  $$('.tab').forEach(function(b){ b.classList.toggle('on', b.dataset.tab === name); });
+  $$('.tabpane').forEach(function(p){ p.classList.toggle('on', p.id === 'tab-' + name); });
+  if(name === 'stats') renderStats();
+  if(name === 'journal') renderJournal();
+  if(name === 'calc') renderCalc();
+}
+$$('.tab').forEach(function(b){
+  b.addEventListener('click', function(){ setTab(b.dataset.tab); });
+});
+
+/* ============================ КАЛЬКУЛЯТОР ============================ */
+function bindCalc(){
+  ['c-equity', 'c-risk', 'c-lev', 'c-fee', 'c-entry', 'c-stop', 'c-tp'].forEach(function(id){
+    el(id).addEventListener('input', renderCalc);
+  });
+  $$('#c-side button').forEach(function(b){
+    b.addEventListener('click', function(){
+      calcSide = b.dataset.side;
+      $$('#c-side button').forEach(function(x){ x.classList.toggle('on', x === b); });
+      renderCalc();
+    });
+  });
+}
+
+function setOut(id, txt){
+  var node = el(id);
+  if(node) node.textContent = txt;
+}
+
+function renderCalc(){
+  var eq = num('c-equity');
+  var riskPct = num('c-risk');
+  var lev = Math.max(1, num('c-lev') || 1);
+  var feePct = Math.max(0, num('c-fee'));
+  var entry = num('c-entry');
+  var stop = num('c-stop');
+  var tp = num('c-tp');
+
+  if(eq > 0) state.settings.equity = eq;
+  if(riskPct > 0) state.settings.risk = riskPct;
+  state.settings.lev = lev;
+  if(feePct >= 0) state.settings.fee = feePct;
+  saveState();
+
+  var warnBox = el('calc-warn');
+
+  if(!(entry > 0) || !(stop > 0) || entry === stop){
+    ['r-risk', 'r-size', 'r-notional', 'r-margin', 'r-stop', 'r-fees', 'r-realrisk', 'r-tp', 'r-r', 'r-liq']
+      .forEach(function(id){ setOut(id, '—'); });
+    warnBox.innerHTML = '<div class="ok">Введите цену входа и стоп-лосс — расчёт появится здесь. Плечо 1× означает торговлю без заёмных средств.</div>';
+    lastCalc = null;
+    return;
+  }
+
+  var isLong = calcSide === 'long';
+  var stopDist = Math.abs(entry - stop);
+  var stopPct = stopDist / entry * 100;
+  var riskAmount = eq * riskPct / 100;
+  var size = riskAmount / stopDist;
+  var notional = size * entry;
+  var margin = notional / lev;
+  var fees = notional * feePct / 100 * 2;
+  var realRisk = riskAmount + fees;
+  var liqDist = 0.995 / lev;
+  var liq = isLong ? entry * (1 - liqDist) : entry * (1 + liqDist);
+  var wrongSide = (isLong && stop >= entry) || (!isLong && stop <= entry);
+
+  setOut('r-risk', money(riskAmount));
+  setOut('r-size', fmtSize(size));
+  setOut('r-notional', money(notional));
+  setOut('r-margin', money(margin));
+  setOut('r-stop', fmt(stopPct, 2) + '%');
+  setOut('r-fees', money(fees));
+  setOut('r-realrisk', money(realRisk));
+
+  var tpOk = tp > 0 && !((isLong && tp <= entry) || (!isLong && tp >= entry));
+  var reward = 0, netProfit = 0, rr = 0;
+  if(tpOk){
+    reward = Math.abs(tp - entry) * size;
+    netProfit = reward - fees;
+    rr = realRisk > 0 ? netProfit / realRisk : 0;
+    setOut('r-tp', money(netProfit));
+    setOut('r-r', (rr >= 0 ? '+' : '') + fmt(rr, 2) + 'R');
+  } else {
+    setOut('r-tp', '—');
+    setOut('r-r', '—');
+  }
+  setOut('r-liq', lev > 1 ? fmtPrice(liq) + ' $' : '—');
+
+  lastCalc = {
+    side: calcSide, entry: entry, stop: stop, tp: tp > 0 ? tp : null,
+    size: size, fee: fees, risk: realRisk, rr: tpOk ? rr : null
+  };
+
+  /* --- предупреждения --- */
+  var warns = [];
+  if(wrongSide){
+    warns.push('Стоп стоит не с той стороны от входа. Для лонга стоп ниже входа, для шорта — выше. Иначе позиция закроется сразу.');
+  }
+  if(riskPct > 2){
+    warns.push('Риск ' + fmt(riskPct, 1) + '% на сделку выше типичной рекомендации (0,5–2%). Пять таких убытков подряд заберут ' + fmt(riskPct * 5, 0) + '% депозита.');
+  }
+  if(stopPct > 0 && stopPct < 0.35){
+    warns.push('Стоп всего ' + fmt(stopPct, 2) + '% от входа. Обычный шум на минутках легко его выбьет, а комиссии (' + money(fees) + ') — это ' + fmt(fees / realRisk * 100, 0) + '% вашего риска.');
+  } else if(fees / realRisk > 0.3){
+    warns.push('Издержки съедают ' + fmt(fees / realRisk * 100, 0) + '% риска. Сделка должна приносить заметно больше, чем кажется.');
+  }
+  if(stopDist / entry > liqDist){
+    warns.push('Стоп дальше расчётной цены ликвидации: при плече ' + fmt(lev, 0) + '× биржа закроет позицию раньше, чем сработает стоп.');
+  }
+  if(notional > eq * lev + 0.01){
+    warns.push('Размер позиции (' + money(notional) + ') больше доступной маржи (' + money(eq * lev) + '). Уменьшите риск или плечо.');
+  }
+  if(tp > 0 && !tpOk){
+    warns.push('Тейк-профит стоит не в ту сторону от входа.');
+  }
+  if(tpOk && rr < 1){
+    warns.push('R:R при тейке ' + fmt(rr, 2) + ' — меньше 1. Для прибыли нужен winrate выше ' + fmt(100 / (1 + rr), 0) + '%: проверьте, реалистично ли это.');
+  }
+
+  if(!warns.length){
+    warnBox.innerHTML = '<div class="ok">Проверки пройдены: риск в пределах нормы, стоп осмысленный, издержки учтены.</div>';
+  } else {
+    warnBox.innerHTML = warns.map(function(w){
+      return '<div class="warn">' + esc(w) + '</div>';
+    }).join('');
+  }
+}
+
+/* ============================ ЖУРНАЛ ============================ */
+function tradeMetrics(t){
+  var dir = t.side === 'short' ? -1 : 1;
+  var entry = +t.entry, size = +t.size, stop = t.stop == null ? null : +t.stop;
+  var exit = t.exit == null ? null : +t.exit;
+  var fee = (t.fee == null) ? autoFee(t) : +t.fee;
+
+  var pnl = exit == null ? null : (exit - entry) * dir * size - fee;
+  var risk = (stop && isFinite(stop)) ? Math.abs(entry - stop) * size + fee : null;
+  var r = (pnl != null && risk && risk > 0) ? pnl / risk : null;
+  return { pnl: pnl, risk: risk, r: r, fee: fee, open: exit == null };
+}
+
+function autoFee(t){
+  var entry = +t.entry, size = Math.abs(+t.size);
+  var exit = t.exit == null ? entry : +t.exit;
+  var pct = (state.settings.fee || 0) / 100;
+  return (Math.abs(entry) + Math.abs(exit)) * size * pct;
+}
+
+function closedTrades(){
+  return state.trades
+    .filter(function(t){ return t.exit != null && isFinite(+t.exit); })
+    .sort(function(a, b){
+      return new Date(a.closedAt || a.ts) - new Date(b.closedAt || b.ts);
+    });
+}
+
+function bindJournal(){
+  el('trade-form').addEventListener('submit', function(e){
+    e.preventDefault();
+    addTrade();
+  });
+
+  el('btn-from-calc').addEventListener('click', function(){
+    if(!lastCalc){ toast('Сначала заполните калькулятор'); return; }
+    el('j-entry').value = lastCalc.entry;
+    el('j-stop').value = lastCalc.stop;
+    el('j-size').value = Math.round(lastCalc.size * 1e6) / 1e6;
+    el('j-fee').value = Math.round(lastCalc.fee * 100) / 100;
+    el('j-side').value = lastCalc.side;
+    if(lastCalc.tp) el('j-exit').value = lastCalc.tp;
+    toast('Данные перенесены из калькулятора');
+  });
+
+  el('trades-body').addEventListener('click', function(e){
+    var editBtn = e.target.closest('[data-edit]');
+    var delBtn = e.target.closest('[data-del]');
+    if(editBtn) openModal(editBtn.getAttribute('data-edit'));
+    if(delBtn) deleteTrade(delBtn.getAttribute('data-del'));
+  });
+}
+
+function addTrade(){
+  var symbol = el('j-symbol').value.trim().toUpperCase();
+  var entry = num('j-entry');
+  var size = num('j-size');
+
+  if(!symbol) { toast('Укажите инструмент, например BTCUSDT'); el('j-symbol').focus(); return; }
+  if(!(entry > 0)) { toast('Укажите цену входа'); el('j-entry').focus(); return; }
+  if(!(size > 0)) { toast('Укажите размер позиции в монетах'); el('j-size').focus(); return; }
+
+  var exitRaw = String(el('j-exit').value).trim();
+  var exit = exitRaw === '' ? null : toNum(exitRaw);
+  var stopRaw = String(el('j-stop').value).trim();
+  var stop = stopRaw === '' ? null : toNum(stopRaw);
+  var feeRaw = String(el('j-fee').value).trim();
+  var fee = feeRaw === '' ? null : toNum(feeRaw);
+
+  var trade = normalizeTrade({
+    ts: el('j-ts').value || nowLocal(),
+    symbol: symbol,
+    side: el('j-side').value,
+    entry: entry,
+    stop: stop,
+    exit: exit,
+    size: size,
+    fee: fee,
+    setup: el('j-setup').value.trim(),
+    note: el('j-note').value.trim()
+  });
+  if(trade.fee == null) trade.fee = autoFee(trade);
+  if(trade.exit != null) trade.closedAt = new Date().toISOString();
+
+  state.trades.push(trade);
+  saveState();
+
+  el('j-entry').value = '';
+  el('j-stop').value = '';
+  el('j-size').value = '';
+  el('j-exit').value = '';
+  el('j-fee').value = '';
+  el('j-note').value = '';
+  el('j-ts').value = nowLocal();
+  el('j-entry').focus();
+
+  renderAll();
+  toast(trade.exit == null ? 'Сделка записана как открытая' : 'Сделка добавлена');
+}
+
+function renderJournal(){
+  var body = el('trades-body');
+  var trades = state.trades.slice().sort(function(a, b){
+    return new Date(b.ts) - new Date(a.ts);
+  });
+
+  el('journal-count').textContent = trades.length ? trades.length + ' шт.' : '';
+  el('journal-empty').hidden = trades.length > 0;
+
+  body.innerHTML = trades.map(function(t){
+    var m = tradeMetrics(t);
+    var isOpen = m.open;
+    var rTxt = m.r == null ? '<span class="muted">—</span>' :
+      '<span class="' + (m.r >= 0 ? 'win' : 'loss') + '">' + (m.r >= 0 ? '+' : '') + fmt(m.r, 2) + 'R</span>';
+    var pnlTxt = isOpen ? '<span class="muted">открыта</span>' :
+      '<span class="' + (m.pnl >= 0 ? 'win' : 'loss') + '">' + money(m.pnl) + '</span>';
+    var sideTxt = t.side === 'long' ? '<span class="win">лонг</span>' : '<span class="loss">шорт</span>';
+
+    return '<tr>' +
+      '<td class="nowrap muted">' + fmtDate(t.ts) + '</td>' +
+      '<td><b>' + esc(t.symbol) + '</b></td>' +
+      '<td>' + sideTxt + '</td>' +
+      '<td class="num">' + fmtPrice(t.entry) + '</td>' +
+      '<td class="num muted">' + (t.stop == null ? '—' : fmtPrice(t.stop)) + '</td>' +
+      '<td class="num">' + (isOpen ? '<span class="muted">—</span>' : fmtPrice(t.exit)) + '</td>' +
+      '<td class="num">' + fmtSize(t.size) + '</td>' +
+      '<td class="num">' + pnlTxt + '</td>' +
+      '<td class="num">' + rTxt + '</td>' +
+      '<td class="muted">' + esc(t.setup || '—') + '</td>' +
+      '<td class="num nowrap">' +
+        '<button class="icon" type="button" data-edit="' + t.id + '" title="Редактировать">✎</button>' +
+        '<button class="icon danger" type="button" data-del="' + t.id + '" title="Удалить">✕</button>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+
+  var symbols = Array.from(new Set(state.trades.map(function(t){ return t.symbol; }).filter(Boolean))).sort();
+  el('symbols').innerHTML = symbols.map(function(s){ return '<option value="' + esc(s) + '">'; }).join('');
+
+  var setups = Array.from(new Set(state.trades.map(function(t){ return t.setup; }).filter(Boolean))).sort();
+  el('setups').innerHTML = setups.map(function(s){ return '<option value="' + esc(s) + '">'; }).join('');
+}
+
+function deleteTrade(id){
+  var t = state.trades.find(function(x){ return x.id === id; });
+  if(!t) return;
+  if(!confirm('Удалить сделку ' + t.symbol + ' от ' + fmtDate(t.ts) + '?')) return;
+  state.trades = state.trades.filter(function(x){ return x.id !== id; });
+  saveState();
+  renderAll();
+  toast('Сделка удалена');
+}
+
+/* --- модальное окно --- */
+function openModal(id){
+  var t = state.trades.find(function(x){ return x.id === id; });
+  if(!t) return;
+  editingId = id;
+  el('m-ts').value = t.ts;
+  el('m-symbol').value = t.symbol;
+  el('m-side').value = t.side;
+  el('m-setup').value = t.setup || '';
+  el('m-entry').value = t.entry;
+  el('m-stop').value = t.stop == null ? '' : t.stop;
+  el('m-size').value = t.size;
+  el('m-exit').value = t.exit == null ? '' : t.exit;
+  el('m-fee').value = t.fee == null ? '' : t.fee;
+  el('m-note').value = t.note || '';
+  el('modal').hidden = false;
+  el('m-entry').focus();
+}
+function closeModal(){
+  el('modal').hidden = true;
+  editingId = null;
+}
+function saveModal(){
+  var t = state.trades.find(function(x){ return x.id === editingId; });
+  if(!t) return;
+  var symbol = el('m-symbol').value.trim().toUpperCase();
+  var entry = toNum(el('m-entry').value);
+  var size = toNum(el('m-size').value);
+  if(!symbol || !(entry > 0) || !(size > 0)){ toast('Проверьте инструмент, вход и размер'); return; }
+
+  var stopRaw = String(el('m-stop').value).trim();
+  var exitRaw = String(el('m-exit').value).trim();
+  var feeRaw = String(el('m-fee').value).trim();
+
+  t.ts = el('m-ts').value || t.ts;
+  t.symbol = symbol;
+  t.side = el('m-side').value;
+  t.setup = el('m-setup').value.trim();
+  t.entry = entry;
+  t.size = size;
+  t.stop = stopRaw === '' ? null : toNum(stopRaw);
+  t.exit = exitRaw === '' ? null : toNum(exitRaw);
+  t.fee = feeRaw === '' ? null : toNum(feeRaw);
+  t.note = el('m-note').value.trim();
+  if(t.fee == null) t.fee = autoFee(t);
+  t.closedAt = t.exit == null ? null : (t.closedAt || new Date().toISOString());
+
+  saveState();
+  closeModal();
+  renderAll();
+  toast('Сохранено');
+}
+function bindModal(){
+  el('m-save').addEventListener('click', saveModal);
+  el('m-cancel').addEventListener('click', closeModal);
+  el('m-delete').addEventListener('click', function(){
+    var id = editingId;
+    closeModal();
+    deleteTrade(id);
+  });
+  el('modal').addEventListener('mousedown', function(e){
+    if(e.target === el('modal')) closeModal();
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape' && !el('modal').hidden) closeModal();
+  });
+}
+
+/* ============================ СТАТИСТИКА ============================ */
+function statsData(){
+  var closed = closedTrades();
+  var rows = closed.map(function(t){ return { t: t, m: tradeMetrics(t) }; });
+  var pnls = rows.map(function(r){ return r.m.pnl; });
+  var rs = rows.map(function(r){ return r.m.r; }).filter(function(v){ return v != null; });
+
+  var wins = pnls.filter(function(v){ return v > 0; });
+  var losses = pnls.filter(function(v){ return v <= 0; });
+  var grossWin = wins.reduce(function(a, b){ return a + b; }, 0);
+  var grossLoss = Math.abs(losses.reduce(function(a, b){ return a + b; }, 0));
+
+  var start = +state.settings.equity || 0;
+  var eq = start, peak = start, maxDD = 0, maxDDPct = 0;
+  var curve = [start];
+  rows.forEach(function(r){
+    eq += r.m.pnl;
+    curve.push(eq);
+    if(eq > peak) peak = eq;
+    var dd = peak - eq;
+    if(dd > maxDD){ maxDD = dd; maxDDPct = peak > 0 ? dd / peak * 100 : 0; }
+  });
+
+  var maxWinStreak = 0, maxLossStreak = 0, curW = 0, curL = 0;
+  pnls.forEach(function(v){
+    if(v > 0){ curW++; curL = 0; } else { curL++; curW = 0; }
+    if(curW > maxWinStreak) maxWinStreak = curW;
+    if(curL > maxLossStreak) maxLossStreak = curL;
+  });
+
+  return {
+    count: rows.length,
+    open: state.trades.length - rows.length,
+    pnls: pnls, rs: rs,
+    winrate: pnls.length ? wins.length / pnls.length * 100 : 0,
+    avgR: rs.length ? rs.reduce(function(a, b){ return a + b; }, 0) / rs.length : 0,
+    expectancyUsd: pnls.length ? pnls.reduce(function(a, b){ return a + b; }, 0) / pnls.length : 0,
+    profitFactor: grossLoss > 0 ? grossWin / grossLoss : (grossWin > 0 ? Infinity : 0),
+    totalPnl: pnls.reduce(function(a, b){ return a + b; }, 0),
+    grossWin: grossWin, grossLoss: grossLoss,
+    avgWin: wins.length ? grossWin / wins.length : 0,
+    avgLoss: losses.length ? -grossLoss / losses.length : 0,
+    best: pnls.length ? Math.max.apply(null, pnls) : 0,
+    worst: pnls.length ? Math.min.apply(null, pnls) : 0,
+    maxDD: maxDD, maxDDPct: maxDDPct,
+    maxWinStreak: maxWinStreak, maxLossStreak: maxLossStreak,
+    curve: curve,
+    start: start
+  };
+}
+
+function renderStats(){
+  var s = statsData();
+  var cards = el('stat-cards');
+  var note = el('curve-note');
+  var empty = el('stats-empty');
+
+  if(!s.count){
+    cards.innerHTML = '<div class="kpi" style="grid-column:1/-1"><div class="k">Статистика</div>' +
+      '<div class="d" style="margin-top:0;font-size:13px">Закрытых сделок пока нет. Добавьте их в журнале — или нажмите «Пример» в шапке, чтобы увидеть, как это выглядит.</div></div>';
+    note.textContent = '';
+    empty.hidden = false;
+    el('equity-canvas').style.display = 'none';
+    el('by-setup').innerHTML = '<div class="empty">—</div>';
+    el('by-symbol').innerHTML = '<div class="empty">—</div>';
+    return;
+  }
+
+  empty.hidden = true;
+  el('equity-canvas').style.display = 'block';
+
+  var pf = s.profitFactor === Infinity ? '∞' : fmt(s.profitFactor, 2);
+  var cardsData = [
+    { k: 'Закрытых сделок', v: String(s.count), d: s.open ? 'открытых: ' + s.open : 'все закрыты', cls: '' },
+    { k: 'Winrate', v: fmt(s.winrate, 1) + '%', d: s.winrate >= 50 ? 'больше половины в плюс' : 'меньше половины в плюс', cls: s.winrate >= 50 ? 'win' : '' },
+    { k: 'Ожидание, R', v: (s.avgR >= 0 ? '+' : '') + fmt(s.avgR, 2) + 'R', d: s.avgR > 0 ? 'есть край' : 'края нет: теряете', cls: s.avgR > 0 ? 'win' : 'loss' },
+    { k: 'Profit factor', v: pf, d: s.profitFactor >= 1.3 ? 'устойчиво' : (s.profitFactor >= 1 ? 'на грани' : 'убыточно'), cls: s.profitFactor >= 1 ? 'win' : 'loss' },
+    { k: 'Итог, PnL', v: money(s.totalPnl), d: 'от ' + money(s.start, 0), cls: s.totalPnl >= 0 ? 'win' : 'loss' },
+    { k: 'Макс. просадка', v: money(-s.maxDD), d: fmt(s.maxDDPct, 1) + '% от пика', cls: 'loss' },
+    { k: 'Средняя прибыль', v: money(s.avgWin), d: 'средний убыток ' + money(s.avgLoss), cls: 'win' },
+    { k: 'Лучшая / худшая', v: money(s.best), d: 'худшая ' + money(s.worst), cls: s.best >= 0 ? 'win' : '' }
+  ];
+
+  cards.innerHTML = cardsData.map(function(c){
+    return '<div class="kpi"><div class="k">' + c.k + '</div>' +
+      '<div class="v ' + (c.cls || '') + '">' + c.v + '</div>' +
+      '<div class="d">' + esc(c.d) + '</div></div>';
+  }).join('');
+
+  note.textContent = 'старт ' + money(s.start, 0) + ' · сделок ' + s.count;
+
+  drawCurve(el('equity-canvas'), s.curve, s.start);
+
+  el('by-setup').innerHTML = breakdownTable(function(t){ return t.setup || 'без сетапа'; });
+  el('by-symbol').innerHTML = breakdownTable(function(t){ return t.symbol; });
+}
+
+function breakdownTable(keyFn){
+  var closed = closedTrades();
+  if(!closed.length) return '<div class="empty">—</div>';
+
+  var map = {};
+  closed.forEach(function(t){
+    var key = keyFn(t) || '—';
+    if(!map[key]) map[key] = { key: key, count: 0, wins: 0, pnl: 0, r: 0, hasR: 0 };
+    var m = tradeMetrics(t);
+    var g = map[key];
+    g.count++;
+    if(m.pnl > 0) g.wins++;
+    g.pnl += m.pnl;
+    if(m.r != null){ g.r += m.r; g.hasR++; }
+  });
+
+  var rows = Object.keys(map).map(function(k){ return map[k]; });
+  rows.sort(function(a, b){ return b.pnl - a.pnl; });
+
+  return '<table class="breakdown"><thead><tr>' +
+    '<th>Группа</th><th class="num">Сделок</th><th class="num">Winrate</th><th class="num">Сумма R</th><th class="num">PnL</th>' +
+    '</tr></thead><tbody>' +
+    rows.map(function(g){
+      var wr = g.count ? g.wins / g.count * 100 : 0;
+      return '<tr>' +
+        '<td>' + esc(g.key) + '</td>' +
+        '<td class="num muted">' + g.count + '</td>' +
+        '<td class="num">' + fmt(wr, 0) + '%</td>' +
+        '<td class="num">' + (g.hasR ? (g.r >= 0 ? '+' : '') + fmt(g.r, 2) : '—') + '</td>' +
+        '<td class="num ' + (g.pnl >= 0 ? 'win' : 'loss') + '">' + money(g.pnl) + '</td>' +
+      '</tr>';
+    }).join('') +
+    '</tbody></table>';
+}
+
+function drawCurve(canvas, values, start){
+  var rect = canvas.getBoundingClientRect();
+  if(rect.width < 20){ return; }
+  var dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(rect.width * dpr);
+  canvas.height = Math.round(rect.height * dpr);
+
+  var ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, rect.width, rect.height);
+
+  var W = rect.width, H = rect.height;
+  var pad = { l: 66, r: 14, t: 16, b: 24 };
+  var iw = W - pad.l - pad.r;
+  var ih = H - pad.t - pad.b;
+
+  var min = Math.min.apply(null, values);
+  var max = Math.max.apply(null, values);
+  if(!isFinite(min) || !isFinite(max)) return;
+  if(min === max){ min -= 1; max += 1; }
+  var span = max - min;
+  min -= span * 0.12;
+  max += span * 0.12;
+
+  function xOf(i){ return pad.l + (values.length <= 1 ? iw / 2 : iw * i / (values.length - 1)); }
+  function yOf(v){ return pad.t + ih * (1 - (v - min) / (max - min)); }
+
+  // сетка
+  ctx.strokeStyle = '#202934';
+  ctx.fillStyle = '#78838f';
+  ctx.font = '11px system-ui, sans-serif';
+  ctx.lineWidth = 1;
+  for(var k = 0; k <= 4; k++){
+    var v = min + (max - min) * k / 4;
+    var yy = yOf(v);
+    ctx.beginPath();
+    ctx.moveTo(pad.l, yy);
+    ctx.lineTo(W - pad.r, yy);
+    ctx.stroke();
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('$' + fmt(v, 0), pad.l - 9, yy);
+  }
+
+  var up = values[values.length - 1] >= values[0];
+  var color = up ? '#4ea87a' : '#cf5f5f';
+
+  // заливка
+  ctx.beginPath();
+  values.forEach(function(v, i){
+    var xx = xOf(i), yy = yOf(v);
+    if(i === 0) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy);
+  });
+  ctx.lineTo(xOf(values.length - 1), pad.t + ih);
+  ctx.lineTo(xOf(0), pad.t + ih);
+  ctx.closePath();
+  var grad = ctx.createLinearGradient(0, pad.t, 0, pad.t + ih);
+  grad.addColorStop(0, up ? 'rgba(78,168,122,0.20)' : 'rgba(207,95,95,0.20)');
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // линия
+  ctx.beginPath();
+  values.forEach(function(v, i){
+    var xx = xOf(i), yy = yOf(v);
+    if(i === 0) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy);
+  });
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+
+  // базовая линия стартового капитала
+  if(start >= min && start <= max){
+    ctx.beginPath();
+    ctx.setLineDash([4, 5]);
+    ctx.moveTo(pad.l, yOf(start));
+    ctx.lineTo(W - pad.r, yOf(start));
+    ctx.strokeStyle = '#3a4653';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // последняя точка
+  var lastX = xOf(values.length - 1), lastY = yOf(values[values.length - 1]);
+  ctx.beginPath();
+  ctx.arc(lastX, lastY, 3.5, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+/* ============================ ЭКСПОРТ / ИМПОРТ ============================ */
+function downloadBlob(blob, name){
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1500);
+}
+function exportJSON(){
+  var data = JSON.stringify(state, null, 2);
+  downloadBlob(new Blob([data], { type: 'application/json' }), 'trades-' + new Date().toISOString().slice(0, 10) + '.json');
+  toast('Файл сохранён в загрузки');
+}
+function exportCSV(){
+  if(!state.trades.length){ toast('Нет сделок для экспорта'); return; }
+  var head = ['Дата', 'Инструмент', 'Направление', 'Вход', 'Стоп', 'Выход', 'Размер', 'Комиссия', 'PnL', 'R', 'Сетап', 'Заметка'];
+  var lines = [head.join(';')];
+  state.trades.slice().sort(function(a, b){ return new Date(a.ts) - new Date(b.ts); }).forEach(function(t){
+    var m = tradeMetrics(t);
+    lines.push([
+      t.ts, t.symbol, t.side === 'long' ? 'лонг' : 'шорт',
+      t.entry, t.stop == null ? '' : t.stop, t.exit == null ? '' : t.exit,
+      t.size, Math.round(m.fee * 100) / 100,
+      m.pnl == null ? '' : Math.round(m.pnl * 100) / 100,
+      m.r == null ? '' : Math.round(m.r * 1000) / 1000,
+      t.setup || '', (t.note || '').replace(/[;\n]/g, ' ')
+    ].join(';'));
+  });
+  var csv = '\ufeff' + lines.join('\r\n');
+  downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), 'trades-' + new Date().toISOString().slice(0, 10) + '.csv');
+  toast('CSV сохранён');
+}
+
+function bindIO(){
+  el('btn-export').addEventListener('click', exportJSON);
+  el('btn-csv').addEventListener('click', exportCSV);
+  el('btn-import').addEventListener('click', function(){ el('import-file').click(); });
+  el('btn-demo').addEventListener('click', loadDemo);
+
+  el('import-file').addEventListener('change', function(e){
+    var file = e.target.files && e.target.files[0];
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      try{
+        var data = JSON.parse(String(reader.result));
+        if(!data || !Array.isArray(data.trades)) throw new Error('в файле нет массива trades');
+        var msg = state.trades.length
+          ? 'Заменить текущие сделки (' + state.trades.length + ') на ' + data.trades.length + ' из файла?'
+          : 'Импортировать ' + data.trades.length + ' сделок?';
+        if(!confirm(msg)) return;
+        state.trades = data.trades.map(normalizeTrade);
+        state.settings = mergeSettings(data.settings);
+        saveState();
+        syncSettingsInputs();
+        renderAll();
+        toast('Импортировано: ' + state.trades.length);
+      }catch(err){
+        toast('Не удалось прочитать файл: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+}
+
+/* ============================ ПРИМЕР ============================ */
+var DEMO = [
+  { ts: '2026-09-14T10:15', symbol: 'BTCUSDT', side: 'long',  entry: 61200, stop: 60800, exit: 62200,   size: 0.025, setup: 'Пробой',  note: 'Пробой недельного уровня, объём подтвердил' },
+  { ts: '2026-09-16T18:40', symbol: 'ETHUSDT', side: 'long',  entry: 2420,  stop: 2390,  exit: 2500,    size: 0.3,   setup: 'Откат',   note: 'Откат к поддержке после импульса' },
+  { ts: '2026-09-18T12:05', symbol: 'SOLUSDT', side: 'long',  entry: 142,   stop: 139,   exit: 149,     size: 3.2,   setup: 'Тренд',   note: 'Держал по плану до цели' },
+  { ts: '2026-09-21T21:30', symbol: 'BTCUSDT', side: 'long',  entry: 63500, stop: 62900, exit: 63100,   size: 0.017, setup: 'Пробой',  note: 'Ложный пробой, вошёл на эмоциях' },
+  { ts: '2026-09-23T09:50', symbol: 'ETHUSDT', side: 'short', entry: 2610,  stop: 2655,  exit: 2662,    size: 0.22,  setup: 'Откат',   note: 'Шорт против тренда — так себе идея' },
+  { ts: '2026-09-25T15:20', symbol: 'SOLUSDT', side: 'long',  entry: 151,   stop: 147,   exit: 146.5,   size: 2.6,   setup: 'Пробой',  note: 'Стоп сработал честно, без вмешательства' },
+  { ts: '2026-09-27T23:10', symbol: 'BTCUSDT', side: 'short', entry: 64100, stop: 64800, exit: 64950,   size: 0.014, setup: 'Тренд',   note: 'Ночная сделка: устал, не надо было' },
+  { ts: '2026-09-30T11:35', symbol: 'ETHUSDT', side: 'long',  entry: 2380,  stop: 2340,  exit: 2470,    size: 0.25,  setup: 'Новости', note: 'Реакция на новость, вход после подтверждения' },
+  { ts: '2026-10-02T17:45', symbol: 'SOLUSDT', side: 'short', entry: 156,   stop: 160,   exit: 146,     size: 2.5,   setup: 'Тренд',   note: 'Тренд вниз, держал до конца' },
+  { ts: '2026-10-05T08:25', symbol: 'BTCUSDT', side: 'long',  entry: 61800, stop: 61200, exit: 63400,   size: 0.017, setup: 'Откат',   note: '' },
+  { ts: '2026-10-07T14:00', symbol: 'ETHUSDT', side: 'short', entry: 2520,  stop: 2565,  exit: 2570,    size: 0.22,  setup: 'Тренд',   note: 'Не дождался разворота, выбило стопом' },
+  { ts: '2026-10-09T19:15', symbol: 'SOLUSDT', side: 'long',  entry: 133,   stop: 130,   exit: 140,     size: 3.3,   setup: 'Пробой',  note: '' },
+  { ts: '2026-10-12T12:40', symbol: 'BTCUSDT', side: 'long',  entry: 62900, stop: 62400, exit: 62300,   size: 0.02,  setup: 'Откат',   note: 'Вошёл слишком рано, стоп близко' },
+  { ts: '2026-10-14T20:05', symbol: 'ETHUSDT', side: 'long',  entry: 2300,  stop: 2260,  exit: 2280,    size: 0.25,  setup: 'Пробой',  note: 'Закрыл руками, испугался — зря' },
+  { ts: '2026-10-16T10:30', symbol: 'SOLUSDT', side: 'short', entry: 147,   stop: 151,   exit: 149.5,   size: 2.5,   setup: 'Откат',   note: 'Пила, ни туда ни сюда' },
+  { ts: '2026-10-19T16:50', symbol: 'BTCUSDT', side: 'long',  entry: 64400, stop: 63800, exit: 65900,   size: 0.017, setup: 'Пробой',  note: 'Лучшая сделка месяца, держал до цели' },
+  { ts: '2026-10-22T09:05', symbol: 'ETHUSDT', side: 'long',  entry: 2440,  stop: 2400,  exit: 2410,    size: 0.25,  setup: 'Новости', note: 'Новость отработала против' },
+  { ts: '2026-10-24T18:20', symbol: 'SOLUSDT', side: 'long',  entry: 139,   stop: 136,   exit: 137,     size: 3.3,   setup: 'Тренд',   note: '' },
+  { ts: '2026-10-27T13:10', symbol: 'BTCUSDT', side: 'short', entry: 66200, stop: 66900, exit: 66400,   size: 0.014, setup: 'Откат',   note: 'Мелкий плюс, почти всё съели комиссии' },
+  { ts: '2026-10-29T21:35', symbol: 'ETHUSDT', side: 'short', entry: 2580,  stop: 2620,  exit: 2590,    size: 0.24,  setup: 'Тренд',   note: 'Сделка ради сделки' },
+  { ts: '2026-10-29T23:50', symbol: 'ETHUSDT', side: 'long',  entry: 2610,  stop: 2560,  exit: null,    size: 0.22,  setup: 'Откат',   note: 'Открыта: откат к зоне, стоп под минимумом' }
+];
+
+function loadDemo(){
+  if(state.trades.length && !confirm('Заменить текущие сделки (' + state.trades.length + ') примером из 15 сделок?')) return;
+  state.trades = DEMO.map(function(t){
+    var trade = normalizeTrade(t);
+    trade.fee = autoFee(trade);
+    if(trade.exit != null) trade.closedAt = new Date(trade.ts).toISOString();
+    return trade;
+  });
+  saveState();
+  renderAll();
+  toast('Загружено 15 примеров сделок');
+}
+
+/* ============================ ИНИЦИАЛИЗАЦИЯ ============================ */
+function syncSettingsInputs(){
+  el('c-equity').value = state.settings.equity;
+  el('c-risk').value = state.settings.risk;
+  el('c-lev').value = state.settings.lev;
+  el('c-fee').value = state.settings.fee;
+}
+
+function renderAll(){
+  renderCalc();
+  renderJournal();
+  if($('#tab-stats').classList.contains('on')) renderStats();
+}
+
+var resizeTimer = null;
+window.addEventListener('resize', function(){
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(function(){
+    if($('#tab-stats').classList.contains('on')) renderStats();
+  }, 120);
+});
+
+bindCalc();
+bindJournal();
+bindModal();
+bindIO();
+syncSettingsInputs();
+el('j-ts').value = nowLocal();
+renderAll();
+
+})();
+</script>
+</body>
+</html>
