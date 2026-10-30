@@ -35,7 +35,7 @@ from .collect import TF_MS, fetch_last, fetch_recent_funding, parse_time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-PAPER_DIR = os.path.join(ROOT, "paper")
+PAPER_DIR = os.environ.get("LAB_PAPER_DIR") or os.path.join(ROOT, "paper")
 CONFIG_PATH = os.path.join(PAPER_DIR, "config.json")
 STATE_PATH = os.path.join(PAPER_DIR, "state.json")
 TRADES_PATH = os.path.join(PAPER_DIR, "trades.csv")
@@ -455,4 +455,5 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
 
